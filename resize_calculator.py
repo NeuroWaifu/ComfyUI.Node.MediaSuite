@@ -2,13 +2,26 @@ from .resize_core import ResizeCore
 
 
 class ResizeCalculator:
-    """Calculate resize dimensions from input image"""
+    """Calculate resize dimensions from input dimensions"""
     
     @classmethod
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "image": ("IMAGE",),
+                "input_width": ("INT", {
+                    "default": 1920,
+                    "min": 1,
+                    "max": 16384,
+                    "step": 1,
+                    "tooltip": "Original width"
+                }),
+                "input_height": ("INT", {
+                    "default": 1080,
+                    "min": 1,
+                    "max": 16384,
+                    "step": 1,
+                    "tooltip": "Original height"
+                }),
                 "scale_mode": (["width", "height", "both", "longest_side", "shortest_side"],),
                 "size_mode": (["both", "upscale_only", "downscale_only"],),
                 "fill_mode": (["keep_aspect", "fill", "fit", "crop"],),
@@ -38,17 +51,18 @@ class ResizeCalculator:
             }
         }
 
-    RETURN_TYPES = ("INT", "INT", "FLOAT", "FLOAT", "STRING")
-    RETURN_NAMES = ("width", "height", "aspect_ratio", "scale_factor", "info")
+    RETURN_TYPES = ("INT", "INT", "FLOAT", "FLOAT", "STRING", "INT", "INT")
+    RETURN_NAMES = ("width", "height", "aspect_ratio", "scale_factor", "info", "maximum_side", "minimum_side")
     FUNCTION = "calculate"
     CATEGORY = "utils/math"
 
-    def calculate(self, image, scale_mode, size_mode, fill_mode,
+    def calculate(self, input_width, input_height, scale_mode, size_mode, fill_mode,
                   target_width, target_height, step, force_even):
-        """Calculate final dimensions from input image"""
+        """Calculate final dimensions from input dimensions"""
         
-        # Get original dimensions from image
-        batch_size, original_height, original_width, channels = image.shape
+        # Use provided dimensions
+        original_width = input_width
+        original_height = input_height
         
         # Calculate target dimensions
         final_width, final_height = ResizeCore.calculate_dimensions(
@@ -95,8 +109,7 @@ class ResizeCalculator:
             f"Final: {actual_width}x{actual_height}",
             f"Aspect: {aspect_ratio:.3f}",
             f"Scale: {scale_factor:.3f}x",
-            f"Mode: {scale_mode}/{fill_mode}",
-            f"Batch: {batch_size}"
+            f"Mode: {scale_mode}/{fill_mode}"
         ]
         
         if step > 1:
@@ -106,4 +119,8 @@ class ResizeCalculator:
             
         info = " | ".join(info_parts)
         
-        return (actual_width, actual_height, aspect_ratio, scale_factor, info)
+        # Calculate maximum and minimum sides
+        maximum_side = max(actual_width, actual_height)
+        minimum_side = min(actual_width, actual_height)
+        
+        return (actual_width, actual_height, aspect_ratio, scale_factor, info, maximum_side, minimum_side)
